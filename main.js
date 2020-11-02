@@ -7,7 +7,9 @@ const mysql = require('mysql2/promise')
 
 //declare constants
 const PORT = (parseInt(process.argv[2]) > 1024 && parseInt(process.argv[2])) || (parseInt(process.env.PORT) > 1024 && parseInt(process.env.PORT)) || 3000
-const SQL_FIND_NAME = 'SELECT * FROM apps WHERE name LIKE ? ORDER BY name LIMIT ?'
+const SQL_FIND_NAME = 'SELECT * FROM apps WHERE name LIKE ? ORDER BY app_id LIMIT ? OFFSET ?'
+const SQL_RECORD_COUNT = 'SELECT COUNT(*) AS count FROM apps WHERE name LIKE ? ORDER BY app_id'
+let pages = null
 
 //create express
 const app = express()
@@ -20,7 +22,7 @@ app.set('view engine', 'hbs')
 const db = mysql.createPool({
     host: process.env.DB_HOST || 'localhost',
     port: process.env.DB_PORT || '3306',
-    user: process.env.DB_USER, 
+    user: process.env.DB_USER,
     password: process.env.DB_PWD,
     database: 'playstore',
     waitForConnections: true,
@@ -37,13 +39,13 @@ const startApp = async (app, db) => {
         await conn.ping()
 
         conn.release()
-        
+
         app.listen(
             PORT,
             console.log(`App has started on ${PORT} at ${getDate()}`)
         )
 
-    } catch(e) {
+    } catch (e) {
         console.error(`Unable to connnect to database: `, e)
     }
 }
@@ -51,6 +53,7 @@ const startApp = async (app, db) => {
 //landing page
 app.get('/',
     (_req, res) => {
+        pages = null //reset page total
         res.status(200)
         res.type('text/html')
         res.render('index')
@@ -60,28 +63,35 @@ app.get('/',
 app.get('/search',
     async (req, res) => {
         const conn = await db.getConnection()
+        const q = req.query.q
+        const p = parseInt(req.query.p)
+        const offset = (p == 1) ? 0 : (p - 1) * 10 //if first page, set offset as 0
         try {
-            const [rows] = await conn.query(SQL_FIND_NAME,[`%${req.query.q}%`,10])
-            const results = rows.map(
-                (result) => {
-                    return {
-                        name: result.name,
-                        category: result.category,
-                        installs: result.installs,
-                        rating: result.rating,
-                    }
-                }
-            )
+            //reduce the need to keep calling DB for count
+            if (pages == null || pages[0] != q) {
+                [pages] = await conn.query(SQL_RECORD_COUNT, [`%${q}%`])
+                pages = [q, Math.ceil(pages[0].count / 10)]
+                console.log('Calling db for page total')
+            }
+            const [results] = await conn.query(SQL_FIND_NAME, [`%${q}%`, 10, offset])
             res.status(200)
             res.type('text/html')
-            res.render('results', { results })
+            res.render('results', {
+                results,
+                back: `/search?q=${q}&p=${p - 1}`,
+                forward: `/search?q=${q}&p=${p + 1}`,
+                currPage: p,
+                totalPage: pages[1],
+                firstpage: p - 1,
+                finalpage: pages[1] - p
+            })
         } catch (e) {
             console.log(e)
             return Promise.reject(e)
         } finally {
-            await conn.release()
+            conn.release()
         }
     })
 
 //start server
-startApp(app,db)
+startApp(app, db)

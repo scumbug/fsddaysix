@@ -25,7 +25,24 @@
         </tbody>
     </table>
 </div>
-<a href="/">Return to search</a>
+<div class="d-flex flex-row justify-content-between">
+    {{#if firstpage}}
+    <a href="{{ back }}" class="btn btn-primary">Back</a>
+    {{else}}
+    <a href="{{ back }}" class="btn btn-primary disabled">Back</a>
+    {{/if}}
+
+    <code>Page {{ currPage }} of {{ totalPage }}</code>
+
+    {{#if finalpage}}
+    <a href="{{ forward }}" class="btn btn-primary">Forward</a>
+    {{else}}
+    <a href="{{ forward }}" class="btn btn-primary disabled">Forward</a>
+    {{/if}}
+</div>
+<div class="row justify-content-center">
+    <a href="/" class="btn btn-primary">Return to search</a>
+</div>
 {{else}}
 <div class="row justify-content-center">
     <h2>No such app found in database</h2>
