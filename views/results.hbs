@@ -1,0 +1,33 @@
+<div class="row justify-content-center">
+    <h1>Results</h1>
+</div>
+
+{{#if results}}
+<div class="row">
+    <table class="table table-striped">
+        <thead class="thead-dark">
+            <tr>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Installs</th>
+                <th>Rating</th>
+            </tr>
+        </thead>
+        <tbody>
+            {{#each results}}
+            <tr>
+                <td>{{this.name}}</td>
+                <td>{{this.category}}</td>
+                <td>{{this.installs}}</td>
+                <td>{{this.rating}}</td>
+            </tr>
+            {{/each}}
+        </tbody>
+    </table>
+</div>
+<a href="/">Return to search</a>
+{{else}}
+<div class="row justify-content-center">
+    <h2>No such app found in database</h2>
+</div>
+{{/if}}
