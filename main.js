@@ -30,26 +30,6 @@ const db = mysql.createPool({
     timezone: '+08:00'
 })
 
-//helper function to check for DB before app starts
-const startApp = async (app, db) => {
-    try {
-        //get a connection from pool
-        const conn = await db.getConnection()
-        console.info('Pinging db')
-        await conn.ping()
-
-        conn.release()
-
-        app.listen(
-            PORT,
-            console.log(`App has started on ${PORT} at ${getDate()}`)
-        )
-
-    } catch (e) {
-        console.error(`Unable to connnect to database: `, e)
-    }
-}
-
 //landing page
 app.get('/',
     (_req, res) => {
@@ -94,4 +74,19 @@ app.get('/search',
     })
 
 //start server
-startApp(app, db)
+db.getConnection()
+    .then(conn => {
+        console.info('Pinging DB')
+        return Promise.all([Promise.resolve(conn), conn.ping()])
+    })
+    .then(results => {
+        results[0].release()
+
+        app.listen(
+            PORT,
+            console.info(`App has started on ${PORT} at ${getDate()}`)
+        )
+    })
+    .catch(e => {
+        console.error(e)
+    })
